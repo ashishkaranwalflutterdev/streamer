@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Broadcast Audio</title>
+</head>
+<body>
+  <h1>Broadcast Audio</h1>
+  <button id="start">Start Broadcasting</button>
+  <button id="stop" disabled>Stop Broadcasting</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const startButton = document.getElementById('start');
+    const stopButton = document.getElementById('stop');
+
+    let mediaRecorder;
+
+    startButton.addEventListener('click', async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
+      console.log('MediaRecorder created');
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          socket.emit('audio-stream', event.data);
+          console.log('Audio data sent', event.data);
+        }
+      };
+
+      mediaRecorder.start(100); // send data in chunks of 100ms
+      console.log('MediaRecorder started');
+
+      startButton.disabled = true;
+      stopButton.disabled = false;
+    });
+
+    stopButton.addEventListener('click', () => {
+      mediaRecorder.stop();
+      console.log('MediaRecorder stopped');
+
+      startButton.disabled = false;
+      stopButton.disabled = true;
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to the server');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from the server');
+    });
+  </script>
+</body>
+</html>
