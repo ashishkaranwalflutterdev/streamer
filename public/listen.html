@@ -4,15 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Listen to Audio</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #fff;
+    }
+
+    #visualization {
+      width: 100%;
+      height: 150px;
+      background-color: #000;
+    }
+  </style>
 </head>
 <body>
-  <h1>Listen to Audio</h1>
-  <audio id="audio" controls autoplay></audio>
+  <h1>Listening to Audio</h1>
+  <audio style="display: none!important;" id="audio" controls autoplay></audio>
+  <canvas id="visualization"></canvas>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const audio = document.getElementById('audio');
+    const canvas = document.getElementById('visualization');
+    const canvasCtx = canvas.getContext('2d');
+
+    // Set up audio context for visualization
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256; // FFT size for frequency analysis
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    // Connect the audio element to the analyser
+    const source = audioContext.createMediaElementSource(audio);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+
+    // MediaSource for streaming
     const mediaSource = new MediaSource();
     audio.src = URL.createObjectURL(mediaSource);
 
@@ -22,10 +62,6 @@
       console.log('MediaSource opened');
       sourceBuffer = mediaSource.addSourceBuffer('audio/webm; codecs=opus');
       console.log('SourceBuffer created');
-    });
-
-    mediaSource.addEventListener('sourceended', () => {
-      console.log('MediaSource ended');
     });
 
     socket.on('connect', () => {
@@ -50,23 +86,46 @@
       console.log('Disconnected from the server');
     });
 
-    mediaSource.addEventListener('sourceclose', () => {
-      console.log('MediaSource closed');
-    });
+    function draw() {
+      requestAnimationFrame(draw);
 
-    mediaSource.addEventListener('error', (e) => {
-      console.error('MediaSource error:', e);
-    });
+      analyser.getByteFrequencyData(dataArray);
 
-    if (sourceBuffer) {
-      sourceBuffer.addEventListener('updateend', () => {
-        console.log('SourceBuffer update ended, ready for more data.');
-      });
+      canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-      sourceBuffer.addEventListener('error', (e) => {
-        console.error('SourceBuffer error:', e);
-      });
+      const barCount = 10;
+      const barWidth = (canvas.width / (barCount * 2)) - 2; // Width of each bar
+      let barHeight;
+      const centerX = canvas.width / 2;
+
+      for (let i = 0; i < barCount; i++) {
+        // Use the average of some frequency data for each bar
+        const barDataIndex = Math.floor((i / barCount) * bufferLength);
+        barHeight = dataArray[barDataIndex] / 2;
+
+        // Left side bar
+        canvasCtx.fillStyle = 'rgb(0, 255, 128)';
+        canvasCtx.fillRect(centerX - (i + 1) * (barWidth + 2), (canvas.height - barHeight) / 2, barWidth, barHeight);
+
+        // Right side bar
+        canvasCtx.fillStyle = 'rgb(0, 255, 128)';
+        canvasCtx.fillRect(centerX + i * (barWidth + 2), (canvas.height - barHeight) / 2, barWidth, barHeight);
+      }
     }
+
+    draw();
+
+    // Resize canvas when the window size changes
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth * 0.8;  // Adjust the width based on the window size
+      canvas.height = 150;
+    });
+
+    // Set initial canvas size
+    canvas.width = window.innerWidth * 0.8;
+    canvas.height = 150;
+
   </script>
 </body>
 </html>

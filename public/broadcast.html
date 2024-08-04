@@ -4,45 +4,127 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Broadcast Audio</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .record-button {
+      width: 80px;
+      height: 80px;
+      background-color: #f44336;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s ease;
+    }
+
+    .record-button.active {
+      background-color: #4caf50;
+    }
+
+    .record-button:focus {
+      outline: none;
+    }
+
+    .record-button svg {
+      fill: #ffffff;
+      width: 40px;
+      height: 40px;
+      transition: transform 0.3s ease;
+    }
+
+    .record-button.active svg {
+      transform: rotate(0deg);
+    }
+
+    .record-button:not(.active) svg {
+      transform: rotate(180deg);
+    }
+
+    .pulse {
+      position: relative;
+      background: #f44336;
+      border-radius: 50%;
+      animation: pulse-animation 2s infinite;
+      transition: background 0.3s ease;
+    }
+
+    .record-button.active .pulse {
+      background: #4caf50;
+    }
+
+    @keyframes pulse-animation {
+      0% {
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 20px rgba(244, 67, 54, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+      }
+    }
+  </style>
 </head>
 <body>
   <h1>Broadcast Audio</h1>
-  <button id="start">Start Broadcasting</button>
-  <button id="stop" disabled>Stop Broadcasting</button>
+  <button id="recordButton" class="record-button">
+    <div class="pulse"></div>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3zm7-3a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.93V21a1 1 0 1 0 2 0v-3.07A7 7 0 0 0 19 11z"/>
+    </svg>
+  </button>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    const startButton = document.getElementById('start');
-    const stopButton = document.getElementById('stop');
+    const recordButton = document.getElementById('recordButton');
 
     let mediaRecorder;
+    let isRecording = false;
 
-    startButton.addEventListener('click', async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
-      console.log('MediaRecorder created');
+    recordButton.addEventListener('click', async () => {
+      if (!isRecording) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm; codecs=opus') ? 'audio/webm; codecs=opus' : 'audio/webm';
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        console.log('MediaRecorder created');
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          socket.emit('audio-stream', event.data);
-          console.log('Audio data sent', event.data);
-        }
-      };
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            socket.emit('audio-stream', event.data);
+            console.log('Audio data sent', event.data);
+          }
+        };
 
-      mediaRecorder.start(100); // send data in chunks of 100ms
-      console.log('MediaRecorder started');
+        mediaRecorder.start(100); // send data in chunks of 100ms
+        console.log('MediaRecorder started');
 
-      startButton.disabled = true;
-      stopButton.disabled = false;
-    });
+        recordButton.classList.add('active');
+        isRecording = true;
+      } else {
+        mediaRecorder.stop();
+        console.log('MediaRecorder stopped');
 
-    stopButton.addEventListener('click', () => {
-      mediaRecorder.stop();
-      console.log('MediaRecorder stopped');
-
-      startButton.disabled = false;
-      stopButton.disabled = true;
+        recordButton.classList.remove('active');
+        isRecording = false;
+      }
     });
 
     socket.on('connect', () => {

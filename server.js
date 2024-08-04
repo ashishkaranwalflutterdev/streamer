@@ -1,10 +1,19 @@
 const express = require('express');
-const http = require('http');
+const https = require('https');  // Use https module instead of http
+const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
+
+// Load your SSL certificate and key
+const sslOptions = {
+  key: fs.readFileSync('server.key'),
+  cert: fs.readFileSync('server.cert')
+};
+
+// Create HTTPS server
+const server = https.createServer(sslOptions, app);
 const io = socketIo(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -35,5 +44,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(3000, () => {
-  console.log('Server is listening on http://localhost:3000');
+  console.log('Server is listening on https://localhost:3000');
 });
