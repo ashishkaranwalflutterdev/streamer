@@ -14,11 +14,9 @@
       background-color: #f0f0f0;
       font-family: Arial, sans-serif;
     }
-
     h1 {
       margin-bottom: 20px;
     }
-
     .record-button {
       width: 80px;
       height: 80px;
@@ -32,30 +30,24 @@
       box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
       transition: background-color 0.3s ease;
     }
-
     .record-button.active {
       background-color: #4caf50;
     }
-
     .record-button:focus {
       outline: none;
     }
-
     .record-button svg {
       fill: #ffffff;
       width: 40px;
       height: 40px;
       transition: transform 0.3s ease;
     }
-
     .record-button.active svg {
       transform: rotate(0deg);
     }
-
     .record-button:not(.active) svg {
       transform: rotate(180deg);
     }
-
     .pulse {
       position: relative;
       background: #f44336;
@@ -63,11 +55,9 @@
       animation: pulse-animation 2s infinite;
       transition: background 0.3s ease;
     }
-
     .record-button.active .pulse {
       background: #4caf50;
     }
-
     @keyframes pulse-animation {
       0% {
         box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
@@ -101,8 +91,8 @@
     recordButton.addEventListener('click', async () => {
       if (!isRecording) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
         const mimeType = MediaRecorder.isTypeSupported('audio/webm; codecs=opus') ? 'audio/webm; codecs=opus' : 'audio/webm';
+        
         mediaRecorder = new MediaRecorder(stream, { mimeType });
         console.log('MediaRecorder created');
 
@@ -113,17 +103,26 @@
           }
         };
 
-        mediaRecorder.start(100); // send data in chunks of 100ms
+        mediaRecorder.start(100); // Send data in chunks of 100ms
         console.log('MediaRecorder started');
+
+        // Notify the server that the broadcast has started
+        socket.emit('broadcast-started');
+        console.log('Broadcast started event emitted');
 
         recordButton.classList.add('active');
         isRecording = true;
       } else {
         mediaRecorder.stop();
-        console.log('MediaRecorder stopped');
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        console.log('MediaRecorder stopped and stream tracks stopped');
 
         recordButton.classList.remove('active');
         isRecording = false;
+
+        // Notify the server that the broadcast has stopped
+        socket.emit('broadcast-stopped');
+        console.log('Broadcast stopped event emitted');
       }
     });
 

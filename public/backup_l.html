@@ -30,7 +30,7 @@
 </head>
 <body>
   <h1>Listening to Audio</h1>
-  <audio id="audio" style="display: none;" controls autoplay></audio>
+  <audio id="audio" controls autoplay></audio>
   <canvas id="visualization"></canvas>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -50,7 +50,6 @@
     let mediaSource = null;
     let sourceBuffer = null;
     let isSourceBufferAppending = false;
-    let audioSource = null;
 
     function initializeMediaSource() {
       mediaSource = new MediaSource();
@@ -68,13 +67,6 @@
         console.log('MediaSource ended');
         resetStream();
       });
-
-      // Reattach the audio element to the audio context and analyser
-      if (!audioSource) {
-        audioSource = audioContext.createMediaElementSource(audio);
-        audioSource.connect(analyser);
-        analyser.connect(audioContext.destination);
-      }
     }
 
     function resetStream() {
@@ -122,54 +114,22 @@
     });
 
     function draw() {
-  requestAnimationFrame(draw);
-  analyser.getByteFrequencyData(dataArray);
-  canvasCtx.fillStyle = 'rgb(0, 0, 0)';
-  canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-  const barCount = 10;
-  const barWidth = (canvas.width / (barCount * 2)) - 2;
-  let barHeight;
-  const centerX = canvas.width / 2;
-  const radius = 5; // Radius for rounded corners
-  const threshold = 20; // Threshold below which bars are not drawn
-
-  for (let i = 0; i < barCount; i++) {
-    const barDataIndex = Math.floor((i / barCount) * bufferLength);
-    barHeight = dataArray[barDataIndex] / 2;
-
-    if (barHeight > threshold) { // Only draw bars if above threshold
-      canvasCtx.fillStyle = '#de5708'; // Orange color
-
-      // Draw left bar with rounded edges
-      canvasCtx.beginPath();
-      canvasCtx.moveTo(centerX - (i + 1) * (barWidth + 2), (canvas.height - barHeight) / 2 + radius);
-      canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + radius, radius, Math.PI, 1.5 * Math.PI);
-      canvasCtx.lineTo(centerX - (i + 1) * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2);
-      canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + radius, radius, 1.5 * Math.PI, 2 * Math.PI);
-      canvasCtx.lineTo(centerX - (i + 1) * (barWidth + 2) + barWidth, (canvas.height - barHeight) / 2 + barHeight - radius);
-      canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0, 0.5 * Math.PI);
-      canvasCtx.lineTo(centerX - (i + 1) * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight);
-      canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0.5 * Math.PI, Math.PI);
-      canvasCtx.closePath();
-      canvasCtx.fill();
-
-      // Draw right bar with rounded edges
-      canvasCtx.beginPath();
-      canvasCtx.moveTo(centerX + i * (barWidth + 2), (canvas.height - barHeight) / 2 + radius);
-      canvasCtx.arc(centerX + i * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + radius, radius, Math.PI, 1.5 * Math.PI);
-      canvasCtx.lineTo(centerX + i * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2);
-      canvasCtx.arc(centerX + i * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + radius, radius, 1.5 * Math.PI, 2 * Math.PI);
-      canvasCtx.lineTo(centerX + i * (barWidth + 2) + barWidth, (canvas.height - barHeight) / 2 + barHeight - radius);
-      canvasCtx.arc(centerX + i * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0, 0.5 * Math.PI);
-      canvasCtx.lineTo(centerX + i * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight);
-      canvasCtx.arc(centerX + i * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0.5 * Math.PI, Math.PI);
-      canvasCtx.closePath();
-      canvasCtx.fill();
+      requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+      canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      const barCount = 10;
+      const barWidth = (canvas.width / (barCount * 2)) - 2;
+      let barHeight;
+      const centerX = canvas.width / 2;
+      for (let i = 0; i < barCount; i++) {
+        const barDataIndex = Math.floor((i / barCount) * bufferLength);
+        barHeight = dataArray[barDataIndex] / 2;
+        canvasCtx.fillStyle = 'rgb(0, 255, 128)';
+        canvasCtx.fillRect(centerX - (i + 1) * (barWidth + 2), (canvas.height - barHeight) / 2, barWidth, barHeight);
+        canvasCtx.fillRect(centerX + i * (barWidth + 2), (canvas.height - barHeight) / 2, barWidth, barHeight);
+      }
     }
-  }
-}
-
-
     draw();
 
     window.addEventListener('resize', () => {

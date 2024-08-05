@@ -1,18 +1,15 @@
 const express = require('express');
-const https = require('https');  // Use https module instead of http
+const https = require('https');
 const fs = require('fs');
 const socketIo = require('socket.io');
 const path = require('path');
 
 const app = express();
-
-// Load your SSL certificate and key
 const sslOptions = {
   key: fs.readFileSync('server.key'),
   cert: fs.readFileSync('server.cert')
 };
 
-// Create HTTPS server
 const server = https.createServer(sslOptions, app);
 const io = socketIo(server);
 
@@ -34,8 +31,13 @@ io.on('connection', (socket) => {
   console.log('A new client connected');
 
   socket.on('audio-stream', (data) => {
-    console.log('Received audio stream data:', data);
+    //console.log('Received audio stream data:', data);
     socket.broadcast.emit('audio-stream', data);
+  });
+
+  socket.on('broadcast-stopped', () => {
+    console.log('Broadcast stopped by broadcaster');
+    io.emit('broadcast-stopped');  // Notify all clients
   });
 
   socket.on('disconnect', () => {
