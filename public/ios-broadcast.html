@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Broadcast Audio</title>
+  <link ref="stylesheet" href="style/main.css"></link>
+  <style>
+    /* Your existing styles */
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">Broadcaster IOS</h1>
+  <button id="recordButton" class="record-button mybutton"> Record</button>
+    <div class="pulse"></div>
+   
+ 
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const recordButton = document.getElementById('recordButton');
+
+    let audioContext;
+    let mediaStreamSource;
+    let isRecording = false;
+    let processor;
+
+    recordButton.addEventListener('click', async () => {
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true ,mimeType: 'audio/webm' });
+          
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          mediaStreamSource = audioContext.createMediaStreamSource(stream);
+          processor = audioContext.createScriptProcessor(2048, 1, 1);
+          processor.onaudioprocess = (e) => {
+            const inputData = e.inputBuffer.getChannelData(0);
+            const inputBuffer = new Float32Array(inputData.length);
+            inputBuffer.set(inputData);
+            socket.emit('audio-stream', inputBuffer.buffer);
+          };
+
+          mediaStreamSource.connect(processor);
+          processor.connect(audioContext.destination);
+
+          // Notify the server that the broadcast has started
+          socket.emit('broadcast-started');
+          console.log('Broadcast started event emitted');
+
+          recordButton.classList.add('active');
+          isRecording = true;
+        } catch (err) {
+          console.error('Error accessing audio stream:', err);
+        }
+      } else {
+        processor.disconnect();
+        mediaStreamSource.disconnect();
+        audioContext.close();
+
+        recordButton.classList.remove('active');
+        isRecording = false;
+
+        // Notify the server that the broadcast has stopped
+        socket.emit('broadcast-stopped');
+        console.log('Broadcast stopped event emitted');
+      }
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to the server');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from the server');
+    });
+  </script>
+</body>
+</html>

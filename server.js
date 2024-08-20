@@ -19,6 +19,14 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/ios-broadcast', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ios-broadcast.html'));
+});
+
+app.get('/ios-player', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ios-player.html'));
+});
+
 app.get('/broadcast', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'broadcast.html'));
 });
@@ -31,7 +39,7 @@ io.on('connection', (socket) => {
   console.log('A new client connected');
 
   socket.on('audio-stream', (data) => {
-    //console.log('Received audio stream data:', data);
+    console.log('Received audio stream data:', data);
     socket.broadcast.emit('audio-stream', data);
   });
 

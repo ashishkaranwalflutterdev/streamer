@@ -30,7 +30,7 @@
 </head>
 <body>
   <h1>Listening to Audio</h1>
-  <audio id="audio" style="display: none;" controls autoplay></audio>
+  <audio id="audio" style="display: block;" controls autoplay></audio>
   <canvas id="visualization"></canvas>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -57,6 +57,7 @@
       audio.src = URL.createObjectURL(mediaSource);
 
       mediaSource.addEventListener('sourceopen', () => {
+        
         sourceBuffer = mediaSource.addSourceBuffer('audio/webm; codecs=opus');
         sourceBuffer.addEventListener('updateend', () => {
           isSourceBufferAppending = false;
@@ -93,6 +94,7 @@
     });
 
     socket.on('audio-stream', (data) => {
+      console.log(data);
       if (data instanceof ArrayBuffer && sourceBuffer && mediaSource.readyState === 'open') {
         if (!isSourceBufferAppending && !sourceBuffer.updating) {
           try {

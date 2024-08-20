@@ -1,0 +1,14 @@
+.mybutton{
+    background-color: #ff5e00; 
+    color: white; 
+    padding: 15px 30px; 
+    border-radius: 10px; 
+    border: none; 
+    font-size: 18px; 
+    font-weight: bold; 
+    text-align: center; 
+    display: block; 
+    width: 80%; 
+    margin: 10px auto;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1)
+}

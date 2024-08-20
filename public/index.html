@@ -4,10 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Audio Stream</title>
+  <link rel="stylesheet" href="style/main.css">
 </head>
 <body>
-  <h1>Welcome to Audio Stream</h1>
-  <button onclick="window.location.href='/broadcast'">Broadcast Audio</button>
-  <button onclick="window.location.href='/listen'">Listen to Audio</button>
+  <h1 style="text-align: center;">Audio Stream</h1>
+  
+  <button class="mybutton"
+  onclick="window.location.href='/broadcast'">Broadcast Android</button>
+
+
+  <button class="mybutton"
+  onclick="window.location.href='/listen'">Listener Android</button>
+
+  <hr style="
+  border: 0; 
+  height: 2px; 
+  background-color: #5d5d5d; 
+  margin: 20px auto; 
+  width: 80%; 
+  border-radius: 5px;">
+
+
+
+<button class="mybutton"
+  onclick="window.location.href='/ios-broadcast'">Broadcast IOS</button>
+
+
+  <button class="mybutton"
+  onclick="window.location.href='/ios-player'">Listener IOS</button>
+
 </body>
 </html>

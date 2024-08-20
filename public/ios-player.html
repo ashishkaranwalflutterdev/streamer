@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listen to Audio</title>
+  <link rel="stylesheet" href="style/main.css">
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #fff;
+    }
+
+    #visualization {
+      width: 100%;
+      height: 150px;
+      background-color: #000;
+    }
+
+    #playButton {
+      padding: 10px 20px;
+      background-color: #de5708;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    #playButton:disabled {
+      background-color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Listening to Audio</h1>
+  <button id="playButton" class="mybutton">Play Audio</button>
+  <canvas id="visualization"></canvas>
+
+  <script src="/socket.io/socket.io.js"></script>
+  
+  <script>
+    const socket = io();
+    const canvas = document.getElementById('visualization');
+    const canvasCtx = canvas.getContext('2d');
+    const playButton = document.getElementById('playButton');
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    let audioQueue = [];
+    let audioSource;
+    let canPlay=true;
+
+    // Function to decode and play the audio
+    function playAudioChunk(chunk) {
+      audioContext.decodeAudioData(chunk, (buffer) => {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        source.start();
+        console.log('Audio chunk played');
+      }, (error) => {
+        console.error('Error decoding audio chunk', error);
+      });
+    }
+
+    // Function to process audio queue
+    function processQueue() {
+      if (audioQueue.length > 0) {
+        const chunk = audioQueue.shift();
+        playAudioChunk(chunk);
+      }
+    }
+
+    socket.on('connect', () => {
+      console.log('Connected to the server');
+    });
+
+    socket.on('audio-stream', (data) => {
+        console.log("New Chunk");
+      if (data instanceof ArrayBuffer) {
+        const blob = new Blob([data]);
+        const url = URL.createObjectURL(blob);
+       
+       if(canPlay){
+        if (audioSource) {
+          audioSource.src = url;
+          audioSource.play().catch(error => {
+            console.error('Error playing audio:', error);
+          });
+        } else {
+          console.error('Audio source is not defined');
+        }
+       }
+      } else {
+        console.error('Received data is not an ArrayBuffer');
+      }
+    });
+
+    socket.on('broadcast-stopped', () => {
+      console.log('Broadcast stopped by the broadcaster');
+      audioQueue = [];
+    });
+
+    socket.on('broadcast-started', () => {
+      console.log('Broadcast started by the broadcaster');
+      audioQueue = [];
+    });
+
+    function draw() {
+      requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+      canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      const barCount = 10;
+      const barWidth = (canvas.width / (barCount * 2)) - 2;
+      let barHeight;
+      const centerX = canvas.width / 2;
+      const radius = 5;
+      const threshold = 20;
+
+      for (let i = 0; i < barCount; i++) {
+        const barDataIndex = Math.floor((i / barCount) * bufferLength);
+        barHeight = dataArray[barDataIndex] / 2;
+
+        if (barHeight > threshold) {
+          canvasCtx.fillStyle = '#de5708';
+
+          // Draw left bar with rounded edges
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(centerX - (i + 1) * (barWidth + 2), (canvas.height - barHeight) / 2 + radius);
+          canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + radius, radius, Math.PI, 1.5 * Math.PI);
+          canvasCtx.lineTo(centerX - (i + 1) * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2);
+          canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + radius, radius, 1.5 * Math.PI, 2 * Math.PI);
+          canvasCtx.lineTo(centerX - (i + 1) * (barWidth + 2) + barWidth, (canvas.height - barHeight) / 2 + barHeight - radius);
+          canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0, 0.5 * Math.PI);
+          canvasCtx.lineTo(centerX - (i + 1) * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight);
+          canvasCtx.arc(centerX - (i + 1) * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0.5 * Math.PI, Math.PI);
+          canvasCtx.closePath();
+          canvasCtx.fill();
+
+          // Draw right bar with rounded edges
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(centerX + i * (barWidth + 2), (canvas.height - barHeight) / 2 + radius);
+          canvasCtx.arc(centerX + i * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + radius, radius, Math.PI, 1.5 * Math.PI);
+          canvasCtx.lineTo(centerX + i * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2);
+          canvasCtx.arc(centerX + i * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + radius, radius, 1.5 * Math.PI, 2 * Math.PI);
+          canvasCtx.lineTo(centerX + i * (barWidth + 2) + barWidth, (canvas.height - barHeight) / 2 + barHeight - radius);
+          canvasCtx.arc(centerX + i * (barWidth + 2) + barWidth - radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0, 0.5 * Math.PI);
+          canvasCtx.lineTo(centerX + i * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight);
+          canvasCtx.arc(centerX + i * (barWidth + 2) + radius, (canvas.height - barHeight) / 2 + barHeight - radius, radius, 0.5 * Math.PI, Math.PI);
+          canvasCtx.closePath();
+          canvasCtx.fill();
+        }
+      }
+    }
+
+    draw();
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth * 0.8;
+      canvas.height = 150;
+    });
+    canvas.width = window.innerWidth * 0.8;
+    canvas.height = 150;
+
+    // Play button interaction to enable audio playback
+    playButton.addEventListener('click', () => {
+      audioContext.resume().then(() => {
+        playButton.disabled = true;
+        audioSource = new Audio(); // Create new audio element
+        canPlay=true;
+        console.log('Audio playback enabled');
+      }).catch((error) => {
+        console.error('Error resuming audio context', error);
+      });
+    });
+  </script>
+</body>
+</html>
